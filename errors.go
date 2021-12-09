@@ -1,0 +1,4 @@
+
+type SwaggerError struct {
+
+}
