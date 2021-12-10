@@ -1,4 +1,4 @@
+package swagger
 
-type SwaggerError struct {
-
+type Error struct {
 }
