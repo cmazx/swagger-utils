@@ -10,11 +10,11 @@ import (
 )
 
 type Response struct {
-	Code       int
-	Title      string
-	Details    string
-	HttpStatus int
-	errors     []Error
+	Code       int     `json:"code"`
+	Title      string  `json:"title"`
+	Details    string  `json:"details"`
+	HttpStatus int     `json:"http_status"`
+	Errors     []Error `json:"errors"`
 }
 
 type ErrorSource1 string
@@ -27,14 +27,14 @@ const (
 )
 
 type ErrorSource struct {
-	Key   ErrorSource1
-	Value string
+	Key   ErrorSource1 `json:"key"`
+	Value string       `json:"value"`
 }
 type Error struct {
-	Code    int
-	Title   string
-	Details string
-	Source  ErrorSource
+	Code    int         `json:"code"`
+	Title   string      `json:"title"`
+	Details string      `json:"details"`
+	Source  ErrorSource `json:"source"`
 }
 
 func NewError(code int, title string, details string, source ErrorSource) Error {
@@ -70,27 +70,28 @@ func NewResponse(status int, title string) Response {
 func (e Response) AddUnknown(errs ...error) Response {
 	//TODO: process "formalized error entries? gorm? rabbit?"
 	for _, err := range errs {
-		e.errors = append(e.errors, Error{Code: 0, Title: "Unknown error", Details: err.Error()})
+		e.Errors = append(e.Errors, Error{Code: 0, Title: "Unknown error", Details: err.Error()})
 	}
 	return e
 }
+
 func (e Response) With(errs ...Error) Response {
-	e.errors = errs
+	e.Errors = errs
 	return e
 }
 
 func (e Response) Add(errs ...Error) Response {
-	e.errors = append(e.errors, errs...)
+	e.Errors = append(e.Errors, errs...)
 	return e
 }
 
-// WithPayload adds the errors to the object internal server error response
+// WithPayload adds the Errors to the object internal server error response
 func (e *Response) WithPayload(payload *models.Error) *Response {
 	panic("Unexpected usage")
 	return e
 }
 
-// SetPayload sets the errors to the object internal server error response
+// SetPayload sets the Errors to the object internal server error response
 func (e *Response) SetPayload(payload *models.Error) {
 	panic("Unexpected usage")
 }
@@ -98,8 +99,8 @@ func (e *Response) SetPayload(payload *models.Error) {
 // WriteResponse to the client
 func (e Response) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 	rw.WriteHeader(e.HTTPStatus())
-	if e.errors != nil {
-		payload := e.errors
+	if e.Errors != nil {
+		payload := e.Errors
 
 		if err := producer.Produce(rw, payload); err != nil {
 			panic(err) // let the recovery middleware deal with this
@@ -110,7 +111,7 @@ func (e Response) WriteResponse(rw http.ResponseWriter, producer runtime.Produce
 func (e *Response) getErrorItems() []*models.ErrorErrorsItems0 {
 	//goland:noinspection GoPreferNilSlice
 	list := []*models.ErrorErrorsItems0{}
-	for _, err := range e.errors {
+	for _, err := range e.Errors {
 		var src *models.ErrorErrorsItems0Source
 		if err.Source.Key != "" {
 			src = &models.ErrorErrorsItems0Source{
@@ -136,7 +137,7 @@ func (e *Response) HTTPStatus() int {
 
 func (e *Response) Error() string {
 	var sb strings.Builder
-	for _, er := range e.errors {
+	for _, er := range e.Errors {
 		sb.WriteString(fmt.Sprintf("%d. %s. %s", er.Code, er.Title, er.Details))
 	}
 	return sb.String()
@@ -149,7 +150,7 @@ func (e *Response) JSON() (string, error) {
 }
 
 func (e *Response) JSONB() ([]byte, error) {
-	if e.errors == nil {
+	if e.Errors == nil {
 		return []byte{}, nil
 	}
 	errorModel := models.Error{Errors: e.getErrorItems()}
