@@ -100,9 +100,7 @@ func (e *Response) SetPayload(payload *models.Error) {
 func (e Response) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 	rw.WriteHeader(e.HTTPStatus())
 	if e.Errors != nil {
-		payload := e.Errors
-
-		if err := producer.Produce(rw, payload); err != nil {
+		if err := producer.Produce(rw, e); err != nil {
 			panic(err) // let the recovery middleware deal with this
 		}
 	}
